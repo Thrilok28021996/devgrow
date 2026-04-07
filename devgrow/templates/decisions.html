@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}Decisions — DevGrow{% endblock %}
+
+{% macro outcome_badge(o) %}
+  {% if o == 1 %}<span class="badge badge-good">Good</span>
+  {% elif o == 2 %}<span class="badge badge-neutral">Neutral</span>
+  {% elif o == 3 %}<span class="badge badge-bad">Bad</span>
+  {% else %}<span class="badge badge-pending">Pending</span>
+  {% endif %}
+{% endmacro %}
+
+{% block content %}
+
+<div class="page-header">
+  <h1>Decision Journal</h1>
+  <button class="btn btn-primary" onclick="openModal('modal-decision')">+ Decision</button>
+</div>
+
+<div class="decisions-layout">
+
+  <!-- Decision list -->
+  <div>
+    <div class="section-hdr"><h2>All Decisions ({{ decisions | length }})</h2></div>
+    {% if decisions %}
+    <div class="decision-list">
+      {% for d in decisions %}
+      <a href="/decisions?selected={{ d.id }}" class="decision-item {{ 'active' if selected_id == d.id }}">
+        <div class="di-title">{{ d.title }}</div>
+        <div class="di-meta">
+          <span>{{ d.created_at[:10] }}</span>
+          {{ outcome_badge(d.outcome) }}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="help-callout">
+      <div class="help-callout-title">Why log decisions?</div>
+      <p>Senior engineers make better decisions not because they're smarter — they track outcomes and learn from them. Writing down your reasoning before you know the result is the only way to avoid hindsight bias.</p>
+      <p class="muted small">Good first entries: tech stack choices, architecture tradeoffs, when to refactor vs rewrite, library selections, API design choices.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Detail panel -->
+  <div>
+    {% if detail %}
+    <div class="card decision-detail">
+
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:16px;">
+        <div>
+          <h2 style="font-size:17px; margin-bottom:4px;">{{ detail.title }}</h2>
+          <div class="muted small">{{ detail.created_at[:10] }} &nbsp; {{ outcome_badge(detail.outcome) }}</div>
+        </div>
+        <div style="display:flex; gap:6px; flex-shrink:0;">
+          <button class="btn btn-ghost btn-sm"
+                  onclick="editDecision({{ detail.id }}, {{ detail.title | tojson }}, {{ (detail.context or '') | tojson }}, {{ (detail.options or '[]') | from_json | join('\n') | tojson }}, {{ detail.choice | tojson }}, {{ (detail.reasoning or '') | tojson }})">
+            Edit
+          </button>
+          {% if detail.outcome is none %}
+          <button class="btn btn-ghost btn-sm" onclick="openModal('modal-outcome')">Mark Outcome</button>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if detail.context %}
+      <div class="detail-section">
+        <div class="detail-label">Context</div>
+        <div class="detail-val">{{ detail.context }}</div>
+      </div>
+      <div class="divider"></div>
+      {% endif %}
+
+      {% if detail.options %}
+      {% set opts = detail.options | from_json %}
+      {% if opts %}
+      <div class="detail-section">
+        <div class="detail-label">Options Considered</div>
+        <div class="detail-val">
+          {% for o in opts %}<span class="option-tag">{{ o }}</span>{% endfor %}
+        </div>
+      </div>
+      <div class="divider"></div>
+      {% endif %}
+      {% endif %}
+
+      <div class="detail-section">
+        <div class="detail-label">Choice Made</div>
+        <div class="detail-val" style="font-weight:600;">{{ detail.choice }}</div>
+      </div>
+
+      {% if detail.reasoning %}
+      <div class="divider"></div>
+      <div class="detail-section">
+        <div class="detail-label">Reasoning</div>
+        <div class="detail-val">{{ detail.reasoning }}</div>
+      </div>
+      {% endif %}
+
+      {% if detail.outcome is not none %}
+      <div class="divider"></div>
+      <div class="detail-section">
+        <div class="detail-label">Outcome &nbsp; {{ outcome_badge(detail.outcome) }}</div>
+        {% if detail.reflection %}
+        <div class="detail-val">{{ detail.reflection }}</div>
+        {% endif %}
+        {% if detail.outcome_at %}
+        <div class="muted small" style="margin-top:4px;">{{ detail.outcome_at[:10] }}</div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+    </div>
+
+    {% else %}
+    <div class="empty" style="margin-top:32px;">Select a decision to view its detail.</div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- ── Modals ────────────────────────────────────────────────────────────────── -->
+
+<div class="modal-overlay" id="modal-decision">
+  <div class="modal-box" style="max-width:600px;">
+    <button class="modal-close" onclick="closeModal('modal-decision')">✕</button>
+    <h2>Log Technical Decision</h2>
+    <form method="post" action="/decisions">
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" name="title" placeholder="e.g. Use Postgres over SQLite for production" required />
+      </div>
+      <div class="form-group">
+        <label>Context — what problem were you solving?</label>
+        <textarea name="context" placeholder="Describe the situation..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Options Considered (one per line)</label>
+        <textarea name="options" placeholder="Postgres&#10;SQLite&#10;MySQL"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Choice Made</label>
+        <input type="text" name="choice" placeholder="What did you pick?" required />
+      </div>
+      <div class="form-group">
+        <label>Reasoning</label>
+        <textarea name="reasoning" placeholder="Why this option?"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-decision')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Decision</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if detail %}
+<div class="modal-overlay" id="modal-edit-decision">
+  <div class="modal-box" style="max-width:600px;">
+    <button class="modal-close" onclick="closeModal('modal-edit-decision')">✕</button>
+    <h2>Edit Decision</h2>
+    <form method="post" id="edit-decision-form" action="/decisions/{{ detail.id }}/edit">
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" name="title" id="edit-dec-title" required />
+      </div>
+      <div class="form-group">
+        <label>Context</label>
+        <textarea name="context" id="edit-dec-context"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Options Considered (one per line)</label>
+        <textarea name="options" id="edit-dec-options"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Choice Made</label>
+        <input type="text" name="choice" id="edit-dec-choice" required />
+      </div>
+      <div class="form-group">
+        <label>Reasoning</label>
+        <textarea name="reasoning" id="edit-dec-reasoning"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-edit-decision')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if detail.outcome is none %}
+<div class="modal-overlay" id="modal-outcome">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-outcome')">✕</button>
+    <h2>Mark Outcome</h2>
+    <p class="muted small" style="margin-bottom:16px;">{{ detail.title }}</p>
+    <form method="post" action="/decisions/{{ detail.id }}/outcome">
+      <div class="form-group">
+        <label>How did it go?</label>
+        <select name="outcome" required>
+          <option value="">Select outcome...</option>
+          <option value="1">✓ Good — worked as expected</option>
+          <option value="2">~ Neutral — okay</option>
+          <option value="3">✗ Bad — regret it</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Reflection — what did you learn?</label>
+        <textarea name="reflection" placeholder="What would you do differently?"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-outcome')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Outcome</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+
+{% endblock %}

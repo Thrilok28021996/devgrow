@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Stats — DevGrow{% endblock %}
+{% block content %}
+
+<div class="page-header"><h1>Stats</h1></div>
+
+<!-- Top stats -->
+<div class="stats-grid">
+  <div class="stat-box">
+    <div class="stat-val purple">{{ stats.total_xp }}</div>
+    <div class="stat-label">Total XP</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-val yellow">{{ stats.streak }}</div>
+    <div class="stat-label">Day Streak</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-val green">{{ stats.mastered_cards }}</div>
+    <div class="stat-label">Cards Mastered</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-val blue">{{ stats.total_reviews }}</div>
+    <div class="stat-label">Total Reviews</div>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+
+  <!-- Level progress -->
+  <div class="card">
+    <div class="section-hdr"><h2>Level Progress</h2></div>
+    <div style="display:flex; align-items:center; gap:16px; margin-bottom:12px;">
+      <div style="font-size:40px; font-weight:800; color:#a78bfa; letter-spacing:-2px;">{{ stats.level }}</div>
+      <div>
+        <div style="font-size:13px; font-weight:600;">Level {{ stats.level }}</div>
+        <div class="muted small">{{ stats.xp_in_level }} / {{ stats.xp_for_next }} XP to Level {{ stats.level + 1 }}</div>
+      </div>
+    </div>
+    <div class="xp-bar-wrap" style="height:8px;">
+      <div class="xp-bar-fill" style="width:{{ [(stats.xp_in_level / stats.xp_for_next * 100)|int, 100]|min }}%"></div>
+    </div>
+  </div>
+
+  <!-- Cards breakdown -->
+  <div class="card">
+    <div class="section-hdr"><h2>Flashcards</h2></div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <div style="display:flex; justify-content:space-between; font-size:13px;">
+        <span class="muted">Total</span><span style="font-weight:600;">{{ stats.total_cards }}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:13px;">
+        <span class="muted">Mastered (≥21d interval)</span><span style="color:var(--success); font-weight:600;">{{ stats.mastered_cards }}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:13px;">
+        <span class="muted">Still learning</span><span style="color:var(--warning); font-weight:600;">{{ stats.total_cards - stats.mastered_cards }}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:13px;">
+        <span class="muted">Due today</span><span style="color:var(--primary); font-weight:600;">{{ stats.due_today }}</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Activity chart -->
+<div class="card" style="margin-bottom:16px;">
+  <div class="section-hdr"><h2>Activity — last 30 days</h2></div>
+  <div class="activity-chart" style="height:80px;">
+    {% set max_xp = activity | map(attribute='xp_earned') | max if activity else 1 %}
+    {% set max_xp = max_xp if max_xp > 0 else 1 %}
+    {% for day in activity %}
+      {% set pct = (day.xp_earned / max_xp * 100) | int %}
+      <div class="activity-bar {{ 'today' if loop.last else ('has-xp' if day.xp_earned > 0) }}"
+           style="height:{{ [pct, 5]|max }}%"
+           data-tip="{{ day.date }}: {{ day.xp_earned }} XP"></div>
+    {% endfor %}
+  </div>
+  <div style="display:flex; justify-content:space-between; margin-top:6px;" class="muted small">
+    <span>{{ activity[0].date if activity }}</span>
+    <span>Today</span>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+  <!-- Topics -->
+  <div class="card">
+    <div class="section-hdr"><h2>Topics</h2></div>
+    {% if topics %}
+    {% set max_sessions = topics | map(attribute='session_count') | max if topics else 1 %}
+    {% set max_sessions = max_sessions if max_sessions > 0 else 1 %}
+    {% for t in topics %}
+    <div class="topic-stat-row">
+      <div class="topic-stat-name">{{ t.name }}</div>
+      <div class="topic-stat-bar-wrap">
+        <div class="topic-stat-bar" style="width:{{ (t.session_count / max_sessions * 100)|int }}%"></div>
+      </div>
+      <div class="topic-stat-nums">{{ t.session_count }}s · {{ t.card_count }}c</div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty">No topics yet.</div>
+    {% endif %}
+  </div>
+
+  <!-- Study time -->
+  <div class="card">
+    <div class="section-hdr"><h2>Study Time</h2></div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <div style="display:flex; justify-content:space-between; font-size:13px;">
+        <span class="muted">Total sessions</span><span style="font-weight:600;">{{ stats.total_sessions }}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:13px;">
+        <span class="muted">Total time</span>
+        <span style="font-weight:600;">{{ (stats.total_minutes / 60)|int }}h {{ stats.total_minutes % 60 }}m</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:13px;">
+        <span class="muted">Decisions logged</span><span style="font-weight:600;">{{ stats.total_decisions }}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:13px;">
+        <span class="muted">Pending outcomes</span>
+        <span style="color:var(--warning); font-weight:600;">{{ stats.pending_outcomes }}</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

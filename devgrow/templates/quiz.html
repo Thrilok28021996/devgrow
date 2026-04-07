@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Quiz — DevGrow{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1>Quiz</h1>
+  <a href="/learn" class="btn btn-ghost">+ Add Cards</a>
+</div>
+
+<div class="quiz-wrap">
+
+{% if card %}
+
+  <div class="quiz-controls">
+    <div class="quiz-limit-row">
+      <span class="muted small">Up to:</span>
+      {% for l in [5, 10, 25, 0] %}
+      <a href="/quiz?limit={{ l }}&shuffle={{ shuffle }}" class="limit-btn {{ 'active' if limit == l }}">
+        {{ 'All' if l == 0 else l }}
+      </a>
+      {% endfor %}
+    </div>
+    <a href="/quiz?limit={{ limit }}&shuffle={{ 1 if not shuffle else 0 }}"
+       class="limit-btn {{ 'active' if shuffle }}">⇄ Shuffle</a>
+  </div>
+
+  <div class="quiz-progress">
+    <span>{{ remaining }} card{{ 's' if remaining != 1 }} remaining</span>
+    <span class="muted small">Space to flip · 1–5 to rate</span>
+  </div>
+
+  <div class="flashcard" id="flashcard">
+    <div class="flashcard-inner">
+
+      <div class="flashcard-face flashcard-front">
+        <div class="flashcard-label">Question</div>
+        <div class="flashcard-text">{{ card.front }}</div>
+        <div class="flashcard-hint">Click or press Space to reveal answer</div>
+      </div>
+
+      <div class="flashcard-face flashcard-back">
+        <div class="flashcard-label">Answer</div>
+        <div class="flashcard-text">{{ card.back }}</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="quiz-meta">
+    <span>Topic: <strong>{{ card.topic_name or 'General' }}</strong></span>
+    <span>Interval: {{ card.interval }}d</span>
+    <span>EF: {{ "%.2f" | format(card.ease_factor) }}</span>
+  </div>
+
+  <button class="btn btn-primary flip-btn" id="flip-btn">Flip Card</button>
+
+  <div class="rating-row" id="rating-row">
+    {% for r, label, sub in [(1,'1','Blackout'), (2,'2','Wrong'), (3,'3','Hard'), (4,'4','Good'), (5,'5','Easy')] %}
+    <form method="post" action="/quiz/review" style="flex:1;">
+      <input type="hidden" name="card_id" value="{{ card.id }}" />
+      <input type="hidden" name="rating" value="{{ r }}" />
+      <input type="hidden" name="limit" value="{{ limit }}" />
+      <input type="hidden" name="shuffle" value="{{ shuffle }}" />
+      <button type="submit" class="rating-btn" data-r="{{ r }}">
+        <span class="rating-label">{{ label }}</span>
+        <span class="rating-sub">{{ sub }}</span>
+      </button>
+    </form>
+    {% endfor %}
+  </div>
+
+  <details class="sm2-explainer">
+    <summary>How does the rating work?</summary>
+    <div class="sm2-body">
+      <p>DevGrow uses <strong>SM-2 spaced repetition</strong> — the same algorithm behind Anki. Each rating controls when you'll see the card again:</p>
+      <table class="sm2-table">
+        <tr><td><strong>1 — Blackout</strong></td><td>Complete blank. Card resets to 1 day.</td></tr>
+        <tr><td><strong>2 — Wrong</strong></td><td>Remembered something but got it wrong. Resets to 1 day.</td></tr>
+        <tr><td><strong>3 — Hard</strong></td><td>Got it with serious effort. Interval grows slowly.</td></tr>
+        <tr><td><strong>4 — Good</strong></td><td>Correct with some effort. Interval multiplies normally.</td></tr>
+        <tr><td><strong>5 — Easy</strong></td><td>Instant recall. Interval grows faster, EF increases.</td></tr>
+      </table>
+      <p class="muted small">The <strong>Ease Factor (EF)</strong> starts at 2.5 and adjusts after every review. A high EF means longer gaps between reviews. Cards with EF ≥ 2.5 and interval ≥ 21 days are considered <em>mastered</em>.</p>
+    </div>
+  </details>
+
+{% else %}
+
+  <div class="quiz-done">
+    <div class="done-icon">✓</div>
+    <h2>All caught up!</h2>
+    <p>No cards due right now. Reviews are scheduled by spaced repetition — come back tomorrow or add more cards.</p>
+    <div style="display:flex; gap:10px; justify-content:center;">
+      <a href="/learn" class="btn btn-primary">Add Cards</a>
+      <a href="/" class="btn btn-ghost">Dashboard</a>
+    </div>
+  </div>
+
+{% endif %}
+
+</div>
+{% endblock %}

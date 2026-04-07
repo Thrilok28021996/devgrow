@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — DevGrow{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1>Dashboard</h1>
+</div>
+
+{% if next_action %}
+<div class="next-action-bar">
+  <span class="next-action-label">{{ next_action.label }}</span>
+  <a href="{{ next_action.url }}" class="btn btn-primary btn-sm">{{ next_action.cta }}</a>
+</div>
+{% endif %}
+
+{% if not stats.review_this_week and today_weekday >= 3 and stats.total_sessions > 0 %}
+<div class="review-nudge">
+  Week of reflection unlocks +30 XP and compounds your learning.
+  <a href="/review" style="color:#fbbf24; font-weight:600; margin-left:6px;">Write this week's review →</a>
+</div>
+{% endif %}
+
+{% if stats.total_sessions == 0 and stats.total_cards == 0 %}
+<div class="welcome-banner">
+  <div class="welcome-header">
+    <div class="welcome-icon">🌱</div>
+    <div>
+      <h2 style="margin:0 0 4px;">Welcome to DevGrow</h2>
+      <p style="margin:0; color:var(--muted-2); font-size:14px;">Your private developer growth tracker. No accounts, no sync — just you and your progress.</p>
+    </div>
+  </div>
+  <div class="welcome-steps">
+    <div class="welcome-step">
+      <div class="step-num">1</div>
+      <div>
+        <div class="step-title">Add a topic you're learning</div>
+        <div class="step-hint">Go to <a href="/learn">Learn</a> → type a topic name → hit Enter.</div>
+      </div>
+    </div>
+    <div class="welcome-step">
+      <div class="step-num">2</div>
+      <div>
+        <div class="step-title">Log your first study session</div>
+        <div class="step-hint">Start the timer in Learn, or enter minutes directly. +20 XP.</div>
+      </div>
+    </div>
+    <div class="welcome-step">
+      <div class="step-num">3</div>
+      <div>
+        <div class="step-title">Add flashcards and quiz yourself</div>
+        <div class="step-hint">Cards use spaced repetition — the app schedules reviews so you don't forget.</div>
+      </div>
+    </div>
+  </div>
+  <div class="welcome-actions">
+    <a href="/learn" class="btn btn-primary">Get Started →</a>
+    <form method="post" action="/demo" style="display:inline;">
+      <button type="submit" class="btn btn-ghost">Load demo data</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<div class="dashboard-grid">
+
+  <!-- Left: level + streak + quick actions -->
+  <div>
+    <div class="level-block">
+      <div class="level-badge">{{ stats.level }}</div>
+      <div class="level-info">
+        <div class="level-title">Level {{ stats.level }}</div>
+        <div class="level-sub">{{ stats.xp_in_level }} / {{ stats.xp_for_next }} XP to next level</div>
+        <div class="xp-bar-wrap">
+          <div class="xp-bar-fill" style="width: {{ [(stats.xp_in_level / stats.xp_for_next * 100) | int, 100] | min }}%"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="streak-block">
+      <div class="streak-num">{{ stats.streak }}</div>
+      <div>
+        <div style="font-weight:600; font-size:13px;">Day Streak</div>
+        <div style="font-size:11px; color:var(--muted-2);">Keep it going!</div>
+      </div>
+    </div>
+
+    {% if stats.due_today > 0 %}
+    <div class="due-block">
+      <div>
+        <div class="due-num">{{ stats.due_today }}</div>
+        <div style="font-size:12px; color:var(--muted-2);">cards due</div>
+      </div>
+      <a href="/quiz" class="btn btn-primary btn-sm">Review →</a>
+    </div>
+    {% else %}
+    <div class="due-block" style="background:var(--success-dim); border-color:rgba(16,185,129,0.3);">
+      <div style="color:var(--success); font-weight:600; font-size:13px;">All caught up! ✓</div>
+      <a href="/quiz" class="btn btn-ghost btn-sm">Quiz</a>
+    </div>
+    {% endif %}
+
+    <div class="section-hdr" style="margin-top:16px;"><h2>Quick Actions</h2></div>
+    <div class="quick-actions">
+      <a href="/quiz" class="quick-action">
+        <div>
+          <div class="qa-label">Review flashcards</div>
+          <div class="qa-hint">{{ stats.due_today }} due today</div>
+        </div>
+        <span style="color:var(--muted)">→</span>
+      </a>
+      <a href="/learn" class="quick-action">
+        <div>
+          <div class="qa-label">Log study session</div>
+          <div class="qa-hint">+20 XP</div>
+        </div>
+        <span style="color:var(--muted)">→</span>
+      </a>
+      <a href="/decisions" class="quick-action">
+        <div>
+          <div class="qa-label">Log a decision</div>
+          <div class="qa-hint">{{ stats.pending_outcomes }} pending outcome{{ 's' if stats.pending_outcomes != 1 }}</div>
+        </div>
+        <span style="color:var(--muted)">→</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Right: stats grid + activity -->
+  <div>
+    <div class="stat-grid" style="margin-bottom:16px;">
+      <div class="stat-box">
+        <div class="stat-val purple">{{ stats.total_xp }}</div>
+        <div class="stat-label">Total XP</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val green">{{ stats.mastered_cards }}</div>
+        <div class="stat-label">Cards Mastered</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val yellow">{{ stats.total_sessions }}</div>
+        <div class="stat-label">Sessions</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val blue">{{ (stats.total_minutes / 60) | int }}h {{ stats.total_minutes % 60 }}m</div>
+        <div class="stat-label">Study Time</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-hdr"><h2>Activity — last 30 days</h2></div>
+      <div class="activity-chart">
+        {% set max_xp = activity | map(attribute='xp_earned') | max if activity else 1 %}
+        {% set max_xp = max_xp if max_xp > 0 else 1 %}
+        {% for day in activity %}
+          {% set pct = (day.xp_earned / max_xp * 100) | int %}
+          {% set is_today = loop.last %}
+          <div class="activity-bar {{ 'today' if is_today else ('has-xp' if day.xp_earned > 0) }}"
+               style="height: {{ [pct, 8] | max }}%"
+               data-tip="{{ day.date }}: {{ day.xp_earned }} XP"></div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="section-hdr"><h2>Decisions</h2></div>
+      <div style="display:flex; gap:24px; font-size:13px;">
+        <div><span style="font-size:22px; font-weight:700; color:#a78bfa">{{ stats.total_decisions }}</span><div class="muted small">logged</div></div>
+        <div><span style="font-size:22px; font-weight:700; color:var(--warning)">{{ stats.pending_outcomes }}</span><div class="muted small">need outcome</div></div>
+        <div><span style="font-size:22px; font-weight:700; color:var(--success)">{{ stats.total_decisions - stats.pending_outcomes }}</span><div class="muted small">resolved</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

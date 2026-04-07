@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+{% block title %}Learn — DevGrow{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1>Learn</h1>
+  <div style="display:flex; gap:8px;">
+    <button class="btn btn-ghost" onclick="openModal('modal-topic')">+ Topic</button>
+    {% if selected_topic %}
+    <button class="btn btn-ghost" onclick="openModal('modal-session')">Log Session</button>
+    <button class="btn btn-ghost" onclick="openModal('modal-reading')">+ Reading</button>
+    <button class="btn btn-primary" onclick="openModal('modal-card')">+ Card</button>
+    {% endif %}
+  </div>
+</div>
+
+<div class="learn-layout">
+
+  <!-- Topics sidebar -->
+  <div>
+    <div class="section-hdr"><h2>Topics</h2></div>
+    {% if topics %}
+    <div class="topic-list">
+      {% for t in topics %}
+      <a href="/learn?topic={{ t.id }}" class="topic-item {{ 'active' if selected_topic and selected_topic.id == t.id }}">
+        <div style="flex:1; min-width:0;">
+          <div class="topic-name">{{ t.name }}</div>
+          <div class="topic-meta">{{ t.session_count }} sessions · {{ t.card_count }} cards</div>
+        </div>
+        <div class="topic-item-actions">
+          <span class="prof-indicator prof-{{ t.proficiency or 1 }}" title="Proficiency {{ t.proficiency or 1 }}/5">
+            {{ ['','▪','▪▪','▪▪▪','▪▪▪▪','▪▪▪▪▪'][t.proficiency or 1] }}
+          </span>
+          <form method="post" action="/learn/topics/{{ t.id }}/delete" onsubmit="return confirm('Delete topic and all its data?')">
+            <button type="submit" class="btn btn-danger btn-sm" title="Delete">✕</button>
+          </form>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">No topics yet.<br>Add one to get started.</div>
+    {% endif %}
+  </div>
+
+  <!-- Right panel -->
+  {% if selected_topic %}
+  <div>
+
+    <!-- Proficiency row -->
+    <div class="proficiency-row">
+      <span class="muted small">Proficiency:</span>
+      <form method="post" action="/learn/topics/{{ selected_topic.id }}/proficiency" class="prof-form">
+        {% for lvl, label in [(1,'Aware'),(2,'Learning'),(3,'Applying'),(4,'Proficient'),(5,'Expert')] %}
+        <button type="submit" name="level" value="{{ lvl }}"
+                class="prof-btn {{ 'active' if (selected_topic.proficiency or 1) == lvl }}">{{ label }}</button>
+        {% endfor %}
+      </form>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="sessions">Sessions ({{ sessions | length }})</button>
+      <button class="tab-btn" data-tab="cards">Cards ({{ cards | length }})</button>
+      <button class="tab-btn" data-tab="reading">Reading ({{ readings | length }})</button>
+    </div>
+
+    <!-- Sessions tab -->
+    <div class="tab-content active" data-tab="sessions">
+      {% if sessions %}
+      <div class="session-list">
+        {% for s in sessions %}
+        <div class="session-item">
+          <div>
+            <div class="session-date">{{ s.created_at }}</div>
+            <div class="session-dur">{{ s.duration_minutes }} min</div>
+            {% if s.notes %}<div class="session-notes">{{ s.notes }}</div>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty">No sessions logged yet for this topic.</div>
+      {% endif %}
+    </div>
+
+    <!-- Cards tab -->
+    <div class="tab-content" data-tab="cards">
+      {% if cards %}
+      <div class="cards-list">
+        {% for c in cards %}
+        <div class="card-item">
+          <div style="flex:1; min-width:0;">
+            <div class="card-front">{{ c.front }}</div>
+            <div class="card-back">{{ c.back }}</div>
+          </div>
+          <div class="card-meta">
+            <div>EF: {{ "%.1f" | format(c.ease_factor) }}</div>
+            <div>Next: {{ c.next_review }}</div>
+            <div style="display:flex; gap:4px; margin-top:6px;">
+              <button class="btn btn-ghost btn-sm"
+                      onclick="editCard({{ c.id }}, {{ c.front | tojson }}, {{ c.back | tojson }}, {{ selected_topic.id }})">
+                Edit
+              </button>
+              <form method="post" action="/learn/cards/{{ c.id }}/delete">
+                <input type="hidden" name="topic_id" value="{{ selected_topic.id }}" />
+                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete card?')">✕</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty">No flashcards for this topic yet.</div>
+      {% endif %}
+    </div>
+
+    <!-- Reading tab -->
+    <div class="tab-content" data-tab="reading">
+      {% if readings %}
+      <div class="reading-list">
+        {% for r in readings %}
+        <div class="reading-item">
+          <div style="flex:1; min-width:0;">
+            <div class="reading-title">
+              {% if r.url %}<a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title }}</a>
+              {% else %}{{ r.title }}{% endif %}
+              <span class="badge reading-type-badge">{{ r.type }}</span>
+            </div>
+            {% if r.notes %}<div class="reading-notes">{{ r.notes }}</div>{% endif %}
+            <div class="reading-date muted small">Added {{ r.created_at[:10] }}{% if r.finished_at %} · Done {{ r.finished_at[:10] }}{% endif %}</div>
+          </div>
+          <div class="reading-actions">
+            {% if r.status == 'queue' %}
+            <form method="post" action="/learn/readings/{{ r.id }}/status">
+              <input type="hidden" name="status" value="reading" />
+              <input type="hidden" name="topic_id" value="{{ selected_topic.id }}" />
+              <button type="submit" class="btn btn-ghost btn-sm">Reading</button>
+            </form>
+            {% endif %}
+            {% if r.status in ('queue', 'reading') %}
+            <form method="post" action="/learn/readings/{{ r.id }}/status">
+              <input type="hidden" name="status" value="done" />
+              <input type="hidden" name="topic_id" value="{{ selected_topic.id }}" />
+              <button type="submit" class="btn btn-ghost btn-sm">✓ Done</button>
+            </form>
+            {% else %}
+            <span class="badge badge-good">Done</span>
+            {% endif %}
+            <form method="post" action="/learn/readings/{{ r.id }}/delete">
+              <input type="hidden" name="topic_id" value="{{ selected_topic.id }}" />
+              <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete?')">✕</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty">No reading logged for this topic yet.</div>
+      {% endif %}
+    </div>
+
+  </div>
+  {% else %}
+  <div class="empty" style="align-self:center;">Select or add a topic to see sessions and cards.</div>
+  {% endif %}
+
+</div>
+
+<!-- ── Modals ────────────────────────────────────────────────────────────────── -->
+
+<div class="modal-overlay" id="modal-topic">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-topic')">✕</button>
+    <h2>New Topic</h2>
+    <form method="post" action="/learn/topics">
+      <div class="form-group">
+        <label>Topic Name</label>
+        <input type="text" name="name" placeholder="e.g. System Design, Python, Networking" autofocus required />
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-topic')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Topic</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-session">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-session')">✕</button>
+    <h2>Log Study Session</h2>
+    <form method="post" action="/learn/sessions">
+      <div class="form-group">
+        <label>Topic</label>
+        <select name="topic_id" required>
+          {% for t in topics %}
+          <option value="{{ t.id }}" {{ 'selected' if selected_topic and selected_topic.id == t.id }}>{{ t.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Duration (minutes)</label>
+        <div class="timer-row">
+          <input type="number" name="duration_minutes" id="duration-input" min="1" max="480" placeholder="45" required />
+          <div class="timer-widget">
+            <span class="timer-display" id="timer-display">0:00</span>
+            <button type="button" class="btn btn-ghost btn-sm" id="timer-start-btn" onclick="timerStart()">▶ Start</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="timer-stop-btn" style="display:none" onclick="timerStop()">■ Use</button>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notes (optional)</label>
+        <textarea name="notes" placeholder="What did you cover?"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-session')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Log Session</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if selected_topic %}
+<div class="modal-overlay" id="modal-card">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-card')">✕</button>
+    <h2>Add Flashcard</h2>
+    <form method="post" action="/learn/cards">
+      <input type="hidden" name="topic_id" value="{{ selected_topic.id }}" />
+      <div class="form-group">
+        <label>Front — Question / Concept</label>
+        <textarea name="front" placeholder="What is consistent hashing?" required></textarea>
+      </div>
+      <div class="form-group">
+        <label>Back — Answer / Explanation</label>
+        <textarea name="back" placeholder="A technique to distribute data across nodes..." required></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-card')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Card</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-edit-card">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-edit-card')">✕</button>
+    <h2>Edit Flashcard</h2>
+    <form method="post" id="edit-card-form" action="/learn/cards/0/edit">
+      <input type="hidden" name="topic_id" value="{{ selected_topic.id }}" />
+      <div class="form-group">
+        <label>Front — Question / Concept</label>
+        <textarea name="front" id="edit-card-front" required></textarea>
+      </div>
+      <div class="form-group">
+        <label>Back — Answer / Explanation</label>
+        <textarea name="back" id="edit-card-back" required></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-edit-card')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-reading">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-reading')">✕</button>
+    <h2>Add Reading</h2>
+    <form method="post" action="/learn/readings">
+      <input type="hidden" name="topic_id" value="{{ selected_topic.id }}" />
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" name="title" placeholder="Article, paper, or book title" required />
+      </div>
+      <div class="form-group">
+        <label>URL (optional)</label>
+        <input type="text" name="url" placeholder="https://..." />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Type</label>
+          <select name="rtype">
+            <option value="article">Article</option>
+            <option value="paper">Paper</option>
+            <option value="book">Book</option>
+            <option value="talk">Talk / Video</option>
+            <option value="docs">Docs</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notes (optional)</label>
+        <textarea name="notes" placeholder="Why you want to read this..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-reading')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Reading</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

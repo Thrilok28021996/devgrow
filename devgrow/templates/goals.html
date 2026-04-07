@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Goals — DevGrow{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1>Goals</h1>
+  <button class="btn btn-primary" onclick="openModal('modal-goal')">+ Goal</button>
+</div>
+
+{% set active = goals | selectattr('status', 'eq', 'active') | list %}
+{% set completed = goals | selectattr('status', 'eq', 'completed') | list %}
+{% set dropped = goals | selectattr('status', 'eq', 'dropped') | list %}
+
+{% if not goals %}
+<div class="help-callout" style="margin-top:24px;">
+  <div class="help-callout-title">What makes a good learning goal?</div>
+  <p>Vague: <em>"get better at system design"</em> — no way to know when you're done.</p>
+  <p>Concrete: <em>"Implement a distributed rate limiter from scratch by April 30"</em> — clear deliverable, deadline, and topic.</p>
+  <p class="muted small">Tie goals to a topic, set a target date, and mark them done when complete. Completing a goal earns +25 XP.</p>
+</div>
+{% else %}
+
+<!-- Active goals -->
+{% if active %}
+<div class="section-hdr" style="margin-bottom:12px;"><h2>Active ({{ active | length }})</h2></div>
+<div class="goal-list">
+  {% for g in active %}
+  {% set overdue = g.target_date and g.target_date < today %}
+  <div class="goal-card {{ 'goal-overdue' if overdue }}">
+    <div class="goal-main">
+      <div class="goal-title">{{ g.title }}</div>
+      {% if g.description %}<div class="goal-desc">{{ g.description }}</div>{% endif %}
+      <div class="goal-meta">
+        {% if g.topic_name %}<span class="goal-tag">{{ g.topic_name }}</span>{% endif %}
+        {% if g.target_date %}
+        <span class="goal-date {{ 'goal-date-overdue' if overdue }}">
+          {{ '⚠ Overdue · ' if overdue }}{{ g.target_date }}
+        </span>
+        {% endif %}
+        <span class="muted small">Added {{ g.created_at[:10] }}</span>
+      </div>
+    </div>
+    <div class="goal-actions">
+      <form method="post" action="/goals/{{ g.id }}/complete">
+        <button type="submit" class="btn btn-ghost btn-sm">✓ Done</button>
+      </form>
+      <form method="post" action="/goals/{{ g.id }}/drop">
+        <button type="submit" class="btn btn-ghost btn-sm">Drop</button>
+      </form>
+      <form method="post" action="/goals/{{ g.id }}/delete" onsubmit="return confirm('Delete goal?')">
+        <button type="submit" class="btn btn-danger btn-sm">✕</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Completed -->
+{% if completed %}
+<div class="section-hdr" style="margin-top:28px; margin-bottom:12px;"><h2>Completed ({{ completed | length }})</h2></div>
+<div class="goal-list">
+  {% for g in completed %}
+  <div class="goal-card goal-done">
+    <div class="goal-main">
+      <div class="goal-title">{{ g.title }}</div>
+      <div class="goal-meta">
+        {% if g.topic_name %}<span class="goal-tag">{{ g.topic_name }}</span>{% endif %}
+        {% if g.completed_at %}<span class="muted small">Completed {{ g.completed_at[:10] }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="goal-actions">
+      <form method="post" action="/goals/{{ g.id }}/delete" onsubmit="return confirm('Delete goal?')">
+        <button type="submit" class="btn btn-danger btn-sm">✕</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Dropped -->
+{% if dropped %}
+<div class="section-hdr" style="margin-top:28px; margin-bottom:12px;"><h2>Dropped ({{ dropped | length }})</h2></div>
+<div class="goal-list">
+  {% for g in dropped %}
+  <div class="goal-card goal-dropped">
+    <div class="goal-main">
+      <div class="goal-title">{{ g.title }}</div>
+      <div class="goal-meta">
+        {% if g.topic_name %}<span class="goal-tag">{{ g.topic_name }}</span>{% endif %}
+        <span class="muted small">{{ g.created_at[:10] }}</span>
+      </div>
+    </div>
+    <div class="goal-actions">
+      <form method="post" action="/goals/{{ g.id }}/delete" onsubmit="return confirm('Delete goal?')">
+        <button type="submit" class="btn btn-danger btn-sm">✕</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endif %}
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-goal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-goal')">✕</button>
+    <h2>New Goal</h2>
+    <form method="post" action="/goals">
+      <div class="form-group">
+        <label>Goal</label>
+        <input type="text" name="title" placeholder="e.g. Build a working RAG pipeline by end of month" required autofocus />
+      </div>
+      <div class="form-group">
+        <label>Description (optional)</label>
+        <textarea name="description" placeholder="What does success look like?"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Topic (optional)</label>
+          <select name="topic_id">
+            <option value="">No topic</option>
+            {% for t in topics %}
+            <option value="{{ t.id }}">{{ t.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Target Date</label>
+          <input type="date" name="target_date" />
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-goal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Goal</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

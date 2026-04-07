@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}Review — DevGrow{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1>Review</h1>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="weekly">Weekly Review</button>
+  <button class="tab-btn" data-tab="lessons">Lessons ({{ lessons | length }})</button>
+</div>
+
+<!-- ── Weekly Review tab ──────────────────────────────────────────────────────── -->
+<div class="tab-content active" data-tab="weekly">
+
+<details class="help-callout help-collapsible" style="margin-bottom:20px;">
+  <summary class="help-callout-title" style="cursor:pointer; list-style:none; display:flex; justify-content:space-between;">
+    Why do a weekly review? <span class="muted small" style="font-weight:400;">click to expand</span>
+  </summary>
+  <div style="margin-top:10px;">
+    <p>A 15-minute weekly review compounds dramatically. Research from ICSE 2020 found developers who do structured reflection improve productivity by up to 79% over a year compared to those who don't.</p>
+    <p class="muted small">The five questions target the things that matter most: strengths to reinforce, blockers to remove, insights to retain, focus to set, and one habit to change. Doing this every week turns experience into expertise.</p>
+  </div>
+</details>
+
+<div class="review-layout">
+
+  <!-- Current week form -->
+  <div>
+    <div class="section-hdr">
+      <h2>Week of {{ week_date }}</h2>
+      {% if current_review %}<span class="badge badge-good">Saved</span>{% endif %}
+    </div>
+
+    <form method="post" action="/review" class="review-form">
+      <input type="hidden" name="week_date" value="{{ week_date }}" />
+
+      <div class="review-question">
+        <label>What went well this week?</label>
+        <textarea name="went_well" placeholder="Wins, breakthroughs, things that clicked..." rows="3">{{ current_review.went_well if current_review }}</textarea>
+      </div>
+
+      <div class="review-question">
+        <label>Where did you get stuck or blocked?</label>
+        <textarea name="blocked" placeholder="Frustrations, slow progress, unclear concepts..." rows="3">{{ current_review.blocked if current_review }}</textarea>
+      </div>
+
+      <div class="review-question">
+        <label>What's the most important thing you learned?</label>
+        <textarea name="key_lesson" placeholder="One insight worth remembering..." rows="2">{{ current_review.key_lesson if current_review }}</textarea>
+      </div>
+
+      <div class="review-question">
+        <label>What's your focus for next week?</label>
+        <textarea name="next_focus" placeholder="Specific topic, project, or skill to prioritize..." rows="2">{{ current_review.next_focus if current_review }}</textarea>
+      </div>
+
+      <div class="review-question">
+        <label>One habit to start, stop, or change</label>
+        <textarea name="habit_goal" placeholder="e.g. Write tests before implementation, review PRs same-day..." rows="2">{{ current_review.habit_goal if current_review }}</textarea>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button type="submit" class="btn btn-primary">
+          {{ 'Update Review' if current_review else 'Save Review +30 XP' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Past reviews -->
+  {% if past_reviews %}
+  <div>
+    <div class="section-hdr"><h2>Past Reviews</h2></div>
+    <div class="past-reviews">
+      {% for r in past_reviews %}
+      {% if r.week_date != week_date %}
+      <div class="past-review-card">
+        <div class="past-review-date">Week of {{ r.week_date }}</div>
+        {% if r.key_lesson %}<div class="past-review-lesson">{{ r.key_lesson }}</div>{% endif %}
+        {% if r.next_focus %}<div class="past-review-focus muted small">→ {{ r.next_focus }}</div>{% endif %}
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+</div>
+
+<!-- ── Lessons tab ────────────────────────────────────────────────────────────── -->
+<div class="tab-content" data-tab="lessons">
+
+  <div style="margin-bottom:20px;">
+    <button class="btn btn-primary" onclick="openModal('modal-lesson')">+ Log Lesson</button>
+  </div>
+
+  {% if lessons %}
+  <div class="lesson-list">
+    {% for l in lessons %}
+    <div class="lesson-card sev-{{ l.severity }}">
+      <div class="lesson-main">
+        <div class="lesson-header">
+          <span class="lesson-title">{{ l.title }}</span>
+          <span class="badge sev-badge-{{ l.severity }}">{{ l.severity }}</span>
+        </div>
+        {% if l.what_happened %}<div class="lesson-field"><span class="lesson-field-label">What happened:</span> {{ l.what_happened }}</div>{% endif %}
+        {% if l.root_cause %}<div class="lesson-field"><span class="lesson-field-label">Root cause:</span> {{ l.root_cause }}</div>{% endif %}
+        <div class="lesson-field lesson-insight"><span class="lesson-field-label">Lesson:</span> {{ l.lesson }}</div>
+        <div class="lesson-meta">
+          {% if l.topic_name %}<span class="goal-tag">{{ l.topic_name }}</span>{% endif %}
+          <span class="muted small">{{ l.created_at[:10] }}</span>
+        </div>
+      </div>
+      <div class="lesson-actions">
+        <form method="post" action="/lessons/{{ l.id }}/delete" onsubmit="return confirm('Delete lesson?')">
+          <button type="submit" class="btn btn-danger btn-sm">✕</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="help-callout">
+    <div class="help-callout-title">Deliberate failure analysis</div>
+    <p>Every incident, bug in production, or bad estimate is a free lesson. Most developers mentally note "I won't do that again" — and then do it again a year later.</p>
+    <p class="muted small">Log the title, what happened, the root cause, and the concrete behavior change. Severity helps you triage which patterns to break first.</p>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- ── Modals ──────────────────────────────────────────────────────────────────── -->
+
+<div class="modal-overlay" id="modal-lesson">
+  <div class="modal-box" style="max-width:600px;">
+    <button class="modal-close" onclick="closeModal('modal-lesson')">✕</button>
+    <h2>Log a Lesson</h2>
+    <form method="post" action="/lessons">
+      <div class="form-group">
+        <label>Title — what went wrong or what you discovered</label>
+        <input type="text" name="title" placeholder="e.g. Didn't write tests before refactoring" required autofocus />
+      </div>
+      <div class="form-group">
+        <label>What happened?</label>
+        <textarea name="what_happened" placeholder="Describe the situation..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Root cause</label>
+        <textarea name="root_cause" placeholder="Why did it happen? What assumption was wrong?"></textarea>
+      </div>
+      <div class="form-group">
+        <label>The lesson — what will you do differently?</label>
+        <textarea name="lesson" placeholder="Concrete change in behavior or thinking..." required></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Severity</label>
+          <select name="severity">
+            <option value="minor">Minor — annoying but recoverable</option>
+            <option value="major">Major — significant impact</option>
+            <option value="critical">Critical — caused real damage</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Topic (optional)</label>
+          <select name="topic_id">
+            <option value="">No topic</option>
+            {% for t in topics %}
+            <option value="{{ t.id }}">{{ t.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-lesson')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Log Lesson +10 XP</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}DevGrow{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<div id="toast" class="toast"></div>
+<div class="shell">
+  <nav>
+    <div class="nav-logo">⬡ <span>Dev</span>Grow</div>
+    <a href="/"          class="{{ 'active' if page == 'dashboard' }}">Dashboard</a>
+    <a href="/learn"     class="{{ 'active' if page == 'learn' }}">Learn</a>
+    <a href="/quiz"      class="{{ 'active' if page == 'quiz' }}">
+      Quiz{% if nav_stats and nav_stats.due_today > 0 %} <span class="nav-badge">{{ nav_stats.due_today }}</span>{% endif %}
+    </a>
+    <a href="/decisions" class="{{ 'active' if page == 'decisions' }}">
+      Decisions{% if nav_stats and nav_stats.pending_outcomes > 0 %} <span class="nav-badge nav-badge-warn">{{ nav_stats.pending_outcomes }}</span>{% endif %}
+    </a>
+    <a href="/goals"     class="{{ 'active' if page == 'goals' }}">
+      Goals{% if nav_stats and nav_stats.overdue_goals > 0 %} <span class="nav-badge nav-badge-danger">{{ nav_stats.overdue_goals }}</span>{% endif %}
+    </a>
+    <a href="/review"    class="{{ 'active' if page == 'review' }}">Review</a>
+    <a href="/stats"     class="{{ 'active' if page == 'stats' }}">Stats</a>
+    <form action="/search" method="get" class="nav-search">
+      <input type="search" name="q" placeholder="Search…"
+             value="{{ search_q or '' }}" autocomplete="off" spellcheck="false" />
+    </form>
+    <div class="nav-xp">
+      {% if nav_stats %}
+        {% if nav_stats.streak > 0 %}<span class="nav-streak">🔥 {{ nav_stats.streak }}d</span>{% endif %}
+        <span class="nav-level">Lv {{ nav_stats.level }}</span>
+        <span class="muted">{{ nav_stats.total_xp }} XP</span>
+      {% endif %}
+    </div>
+  </nav>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

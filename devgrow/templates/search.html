@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Search — DevGrow{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1>Search</h1>
+</div>
+
+<form action="/search" method="get" class="search-form">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search cards, decisions, sessions…"
+         autofocus autocomplete="off" spellcheck="false" />
+  <button type="submit" class="btn btn-primary">Search</button>
+</form>
+
+{% if q %}
+
+  {% if total == 0 %}
+  <div class="empty" style="margin-top:24px;">No results for "{{ q }}"</div>
+  {% else %}
+
+  <p class="muted small" style="margin: 16px 0 24px;">{{ total }} result{{ 's' if total != 1 }} for "{{ q }}"</p>
+
+  {# ── Flashcards ──────────────────────────────────────────── #}
+  {% if results.cards %}
+  <div class="search-section">
+    <div class="section-hdr">
+      <h2>Flashcards <span class="muted">({{ results.cards | length }})</span></h2>
+    </div>
+    <div class="cards-list">
+      {% for c in results.cards %}
+      <a href="/learn?topic={{ c.topic_id }}" class="card-item search-result">
+        <div style="flex:1; min-width:0;">
+          <div class="card-front">{{ c.front }}</div>
+          <div class="card-back">{{ c.back }}</div>
+        </div>
+        <div class="card-meta">
+          <div>{{ c.topic_name or 'General' }}</div>
+          <div>{{ c.next_review }}</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Decisions ───────────────────────────────────────────── #}
+  {% if results.decisions %}
+  <div class="search-section">
+    <div class="section-hdr">
+      <h2>Decisions <span class="muted">({{ results.decisions | length }})</span></h2>
+    </div>
+    <div class="decision-list">
+      {% for d in results.decisions %}
+      <a href="/decisions?selected={{ d.id }}" class="decision-item search-result">
+        <div class="di-title">{{ d.title }}</div>
+        <div class="di-meta">
+          <span>{{ d.choice }}</span>
+          <span>·</span>
+          <span>{{ d.created_at[:10] }}</span>
+          {% if d.outcome is none %}
+          <span class="badge badge-pending">Pending</span>
+          {% elif d.outcome == 1 %}
+          <span class="badge badge-good">Good</span>
+          {% elif d.outcome == 2 %}
+          <span class="badge badge-neutral">Neutral</span>
+          {% else %}
+          <span class="badge badge-bad">Bad</span>
+          {% endif %}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Sessions ────────────────────────────────────────────── #}
+  {% if results.sessions %}
+  <div class="search-section">
+    <div class="section-hdr">
+      <h2>Sessions <span class="muted">({{ results.sessions | length }})</span></h2>
+    </div>
+    <div class="session-list">
+      {% for s in results.sessions %}
+      <a href="/learn?topic={{ s.topic_id }}" class="session-item search-result" style="text-decoration:none; color:inherit;">
+        <div>
+          <div class="session-date">{{ s.created_at }} · {{ s.topic_name or 'General' }}</div>
+          <div class="session-dur">{{ s.duration_minutes }} min</div>
+          <div class="session-notes">{{ s.notes }}</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% endif %}
+{% endif %}
+
+{% endblock %}
