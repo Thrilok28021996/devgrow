@@ -27,7 +27,19 @@ def _lan_ip() -> str:
 def main(ctx: click.Context) -> None:
     """DevGrow — level up as a developer."""
     if ctx.invoked_subcommand is None:
-        ctx.invoke(serve)
+        ctx.invoke(desktop)
+
+
+@main.command()
+def desktop() -> None:
+    """Launch the DevGrow desktop app (requires PySide6)."""
+    try:
+        from devgrow.desktop import main as _desktop_main
+    except ImportError:
+        click.echo("PySide6 is required for the desktop app.")
+        click.echo("  pip install 'devgrow[desktop]'  or  pip install PySide6")
+        raise SystemExit(1)
+    _desktop_main()
 
 
 @main.command()

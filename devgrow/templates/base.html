@@ -4,42 +4,103 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}DevGrow{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
 <div id="toast" class="toast"></div>
+
 <div class="shell">
-  <nav>
-    <div class="nav-logo">⬡ <span>Dev</span>Grow</div>
-    <a href="/"          class="{{ 'active' if page == 'dashboard' }}">Dashboard</a>
-    <a href="/learn"     class="{{ 'active' if page == 'learn' }}">Learn</a>
-    <a href="/quiz"      class="{{ 'active' if page == 'quiz' }}">
-      Quiz{% if nav_stats and nav_stats.due_today > 0 %} <span class="nav-badge">{{ nav_stats.due_today }}</span>{% endif %}
-    </a>
-    <a href="/decisions" class="{{ 'active' if page == 'decisions' }}">
-      Decisions{% if nav_stats and nav_stats.pending_outcomes > 0 %} <span class="nav-badge nav-badge-warn">{{ nav_stats.pending_outcomes }}</span>{% endif %}
-    </a>
-    <a href="/goals"     class="{{ 'active' if page == 'goals' }}">
-      Goals{% if nav_stats and nav_stats.overdue_goals > 0 %} <span class="nav-badge nav-badge-danger">{{ nav_stats.overdue_goals }}</span>{% endif %}
-    </a>
-    <a href="/review"    class="{{ 'active' if page == 'review' }}">Review</a>
-    <a href="/stats"     class="{{ 'active' if page == 'stats' }}">Stats</a>
-    <form action="/search" method="get" class="nav-search">
-      <input type="search" name="q" placeholder="Search…"
-             value="{{ search_q or '' }}" autocomplete="off" spellcheck="false" />
-    </form>
-    <div class="nav-xp">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">DG</div>
+      <div class="sidebar-logo-text"><span>Dev</span>Grow</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="/"          class="nav-item {{ 'active' if page == 'dashboard' }}">
+        <span class="nav-icon">⬡</span>
+        <span class="nav-label">Dashboard</span>
+      </a>
+      <a href="/learn"     class="nav-item {{ 'active' if page == 'learn' }}">
+        <span class="nav-icon">📚</span>
+        <span class="nav-label">Learn</span>
+      </a>
+      <a href="/quiz"      class="nav-item {{ 'active' if page == 'quiz' }}">
+        <span class="nav-icon">🃏</span>
+        <span class="nav-label">Quiz</span>
+        {% if nav_stats and nav_stats.due_today > 0 %}
+          <span class="nav-badge">{{ nav_stats.due_today }}</span>
+        {% endif %}
+      </a>
+      <a href="/decisions" class="nav-item {{ 'active' if page == 'decisions' }}">
+        <span class="nav-icon">⚖️</span>
+        <span class="nav-label">Decisions</span>
+        {% if nav_stats and nav_stats.pending_outcomes > 0 %}
+          <span class="nav-badge nav-badge-warn">{{ nav_stats.pending_outcomes }}</span>
+        {% endif %}
+      </a>
+      <a href="/goals"     class="nav-item {{ 'active' if page == 'goals' }}">
+        <span class="nav-icon">🎯</span>
+        <span class="nav-label">Goals</span>
+        {% if nav_stats and nav_stats.overdue_goals > 0 %}
+          <span class="nav-badge nav-badge-danger">{{ nav_stats.overdue_goals }}</span>
+        {% endif %}
+      </a>
+      <a href="/review"    class="nav-item {{ 'active' if page == 'review' }}">
+        <span class="nav-icon">📝</span>
+        <span class="nav-label">Review</span>
+      </a>
+      <a href="/stats"     class="nav-item {{ 'active' if page == 'stats' }}">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Stats</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
       {% if nav_stats %}
-        {% if nav_stats.streak > 0 %}<span class="nav-streak">🔥 {{ nav_stats.streak }}d</span>{% endif %}
-        <span class="nav-level">Lv {{ nav_stats.level }}</span>
-        <span class="muted">{{ nav_stats.total_xp }} XP</span>
+      <div class="sidebar-xp">
+        <div class="sidebar-xp-top">
+          <span class="sidebar-level">Lv {{ nav_stats.level }}</span>
+          {% if nav_stats.streak > 0 %}
+          <span class="sidebar-streak">🔥 {{ nav_stats.streak }}d</span>
+          {% endif %}
+        </div>
+        <div class="xp-bar-wrap">
+          <div class="xp-bar-fill" style="width:{{ ((nav_stats.xp_in_level / nav_stats.xp_for_next) * 100) | int if nav_stats.xp_for_next else 100 }}%"></div>
+        </div>
+        <div style="font-size:10px;color:var(--muted-2)">{{ nav_stats.xp_in_level }}/{{ nav_stats.xp_for_next }} XP</div>
+      </div>
       {% endif %}
     </div>
-  </nav>
-  <main>
-    {% block content %}{% endblock %}
-  </main>
+  </aside>
+
+  <!-- Main area -->
+  <div class="main-wrapper" id="main-wrapper">
+    <header class="topbar">
+      <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <line x1="2" y1="4.5" x2="16" y2="4.5"/>
+          <line x1="2" y1="9"   x2="16" y2="9"/>
+          <line x1="2" y1="13.5" x2="16" y2="13.5"/>
+        </svg>
+      </button>
+
+      <form action="/search" method="get" class="nav-search">
+        <span class="nav-search-icon">🔍</span>
+        <input type="search" name="q" placeholder="Search…"
+               value="{{ search_q or '' }}" autocomplete="off" spellcheck="false" />
+      </form>
+    </header>
+
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+  </div>
 </div>
+
 <script src="/static/app.js"></script>
 </body>
 </html>

@@ -1,3 +1,24 @@
+// ── Sidebar toggle ─────────────────────────────────────────────────────────────
+(function () {
+  const sidebar  = document.getElementById('sidebar');
+  const wrapper  = document.getElementById('main-wrapper');
+  const btn      = document.getElementById('sidebar-toggle');
+  if (!sidebar || !btn) return;
+
+  const COLLAPSED = 'collapsed';
+  const stored = localStorage.getItem('sidebar-collapsed');
+  if (stored === '1') {
+    sidebar.classList.add(COLLAPSED);
+    wrapper && wrapper.classList.add('sidebar-collapsed');
+  }
+
+  btn.addEventListener('click', () => {
+    const isNowCollapsed = sidebar.classList.toggle(COLLAPSED);
+    wrapper && wrapper.classList.toggle('sidebar-collapsed', isNowCollapsed);
+    localStorage.setItem('sidebar-collapsed', isNowCollapsed ? '1' : '0');
+  });
+})();
+
 // ── Flash toast ────────────────────────────────────────────────────────────────
 (function () {
   const params = new URLSearchParams(window.location.search);

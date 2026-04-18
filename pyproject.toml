@@ -17,8 +17,12 @@ dependencies = [
     "click>=8.1.0",
 ]
 
+[project.optional-dependencies]
+desktop = ["PySide6>=6.7"]
+
 [project.scripts]
-devgrow = "devgrow.cli:main"
+devgrow         = "devgrow.cli:main"
+devgrow-desktop = "devgrow.desktop:main"
 
 [tool.ruff]
 line-length = 100
